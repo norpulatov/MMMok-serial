@@ -47,8 +47,28 @@ class ForceSubscriptionMiddleware(BaseMiddleware):
             }
         except Exception:
             logger.exception("A'zolik tekshiruvida xatolik")
-            # Fallback: do not block if API check fails unexpectedly.
-            return await handler(event, data)
+            text = (
+                "⚠️ A'zolik tekshiruvini bajara olmadim.\n"
+                "Kanal ID yoki botning kanal huquqlarini tekshiring."
+            )
+            keyboard = force_sub_check_keyboard(settings.force_sub_channel_link)
+            if isinstance(event, Message):
+                await event.answer(text, reply_markup=keyboard)
+                return None
+            if isinstance(event, CallbackQuery):
+                await event.message.answer(text, reply_markup=keyboard)
+                await event.answer("A'zolik tekshiruvi ishlamadi.", show_alert=True)
+                return None
+            if isinstance(event, InlineQuery):
+                await event.answer(
+                    [],
+                    is_personal=True,
+                    cache_time=1,
+                    switch_pm_text="A'zolik tekshiruvi ishlamadi",
+                    switch_pm_parameter="start",
+                )
+                return None
+            return None
 
         if is_member:
             return await handler(event, data)
